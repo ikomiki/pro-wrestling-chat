@@ -2,6 +2,8 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+初回は `.env.example` を `.env.local` にコピーして値を埋め、`bun run db:migrate` で認証テーブルを作ってから `bun dev` を起動する。
+
 First, run the development server:
 
 ```bash
