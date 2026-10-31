@@ -86,6 +86,7 @@ export function MatchChat({ matchId, initialStatus, initialState, initialMessage
         break;
       case "error":
         setNotice(e.message);
+        setStatus("failed");
         break;
     }
   }, []);
@@ -108,6 +109,8 @@ export function MatchChat({ matchId, initialStatus, initialState, initialMessage
         }
         if (res.status === 409) {
           setNotice("処理中です");
+          // 別タブなどが進行中なので、running のポーリングで終わりを拾う
+          setStatus("running");
           return false;
         }
         if (res.status === 400) {
