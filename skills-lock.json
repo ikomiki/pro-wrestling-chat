@@ -31,6 +31,24 @@
       "skillPath": "better-auth/emailAndPassword/SKILL.md",
       "computedHash": "863886759f729081e265941f4f72c503835d55a1f34f6d63cebe6571159fff4a"
     },
+    "gemini-api-dev": {
+      "source": "google-gemini/gemini-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gemini-api-dev/SKILL.md",
+      "computedHash": "b0df5dbf241530c8b3315a7fce5b8fb6354f60e395d8ca9bc5677b766bbea49e"
+    },
+    "gemini-live-api-dev": {
+      "source": "google-gemini/gemini-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gemini-live-api-dev/SKILL.md",
+      "computedHash": "c7d638977ac02fc0280408b359105b5e74e8697b35efb6d16369e7967bd83357"
+    },
+    "gemini-omni-flash-api": {
+      "source": "google-gemini/gemini-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gemini-omni-flash-api/SKILL.md",
+      "computedHash": "b2970424def1e5b5c46f83eddfd4ebd6fcfaa122903e5c2a978639a4e478afbb"
+    },
     "migrate-radix-to-base": {
       "source": "shadcn/ui",
       "sourceType": "github",
