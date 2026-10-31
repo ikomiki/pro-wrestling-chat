@@ -50,9 +50,10 @@ const setupStep = createStep({
     for (const key of ["time", "place", "player", "enemy"] as const) {
       if (!inputData[key].trim()) seeds[key] = (await pickWithTool(even(SEEDS[key]))).label;
     }
+    let seededType: EnemyType | null = null;
     if (seeds.enemy) {
-      const type = (await pickWithTool(even(ENEMY_TYPES))).label as EnemyType;
-      seeds.enemy += `（タイプ: ${ENEMY_TYPE_LABEL[type]}）`;
+      seededType = (await pickWithTool(even(ENEMY_TYPES))).label as EnemyType;
+      seeds.enemy += `（タイプ: ${ENEMY_TYPE_LABEL[seededType]}）`;
     }
     const res = await analyst.generate(completeSetupPrompt(inputData, seeds), {
       structuredOutput: {
@@ -65,7 +66,7 @@ const setupStep = createStep({
       },
     });
     const s = res.object;
-    const enemyType = s.enemyType === "unknown" ? ((await pickWithTool(even(ENEMY_TYPES))).label as EnemyType) : s.enemyType;
+    const enemyType = seededType ?? (s.enemyType === "unknown" ? ((await pickWithTool(even(ENEMY_TYPES))).label as EnemyType) : s.enemyType);
     await appDb.updateMatch(runId, { title: `${s.playerName} vs ${s.enemyName}` });
     return {
       setting: { time: s.time, place: s.place, enemyType, playerSignature: inputData.playerSignature.trim() || null },
