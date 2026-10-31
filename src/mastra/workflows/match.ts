@@ -2,7 +2,7 @@ import { createStep, createWorkflow } from "@mastra/core/workflows";
 import type { ToolStream } from "@mastra/core/tools";
 import { z } from "zod";
 import { appDb } from "../../db/app";
-import { adjustCategoryTable, sanitizeWeights } from "../../game/enemy-table";
+import { adjustCategoryTable, normalizeWeights } from "../../game/enemy-table";
 import { cryptoRng } from "../../game/random";
 import { resolveTurn } from "../../game/rules";
 import { actionSchema, matchStateSchema, setupInputSchema, turnLogSchema, type MatchState, type SetupInput } from "../../game/schema";
@@ -104,7 +104,7 @@ const sceneStep = createStep({
     });
     const lastCategory = state.enemyHistory.at(-1)?.category;
     const enemyTable = adjustCategoryTable(table.object.category, lastCategory && lastCategory !== "none" ? lastCategory : null);
-    const gradeTable = sanitizeWeights(table.object.grade);
+    const gradeTable = normalizeWeights(table.object.grade);
     const categoryPick = await pickWithTool(asOptions(enemyTable));
     const gradePick = await pickWithTool(asOptions(gradeTable));
     const category = categoryPick.label as Category;

@@ -1,5 +1,6 @@
 import { test, expect } from "bun:test";
-import { adjustCategoryTable, sanitizeWeights, CATEGORY_FLOOR } from "./enemy-table";
+import { adjustCategoryTable, normalizeWeights, sanitizeWeights, CATEGORY_FLOOR } from "./enemy-table";
+import { queueRng, weightedPick } from "./random";
 
 const all = (n: number) => ({ throw: n, submission: n, strike: n, aerial: n });
 
@@ -17,4 +18,16 @@ test("直前と同じ種類は半分になる", () => {
   const t = adjustCategoryTable({ throw: 60, submission: 20, strike: 10, aerial: 10 }, "throw");
   expect(t.throw).toBe(30);
   expect(t.submission).toBe(20);
+});
+test("極端に小さい・大きい重みも合計 100 にそろえて抽選できる", () => {
+  for (const raw of [
+    { normal: 1e-6, big: 1e-6, finisher: 2e-6 },
+    { normal: 1e300, big: 1e300, finisher: 2e300 },
+  ]) {
+    const t = normalizeWeights(raw);
+    expect(t.normal + t.big + t.finisher).toBeCloseTo(100);
+    expect(t.finisher).toBeCloseTo(50);
+    const table = Object.entries(t).map(([value, weight]) => ({ value, weight }));
+    expect(weightedPick(table, queueRng([9999])).value).toBe("finisher");
+  }
 });

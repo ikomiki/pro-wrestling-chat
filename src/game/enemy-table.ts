@@ -11,6 +11,17 @@ export function sanitizeWeights<K extends string>(raw: Record<K, number>): Recor
   return out;
 }
 
+export function normalizeWeights<K extends string>(raw: Record<K, number>): Record<K, number> {
+  const clean = sanitizeWeights(raw);
+  const keys = Object.keys(clean) as K[];
+  // 先に最大値で割るのは、巨大な重みの合計が Infinity になるのを避けるため
+  const max = Math.max(...keys.map((k) => clean[k]));
+  const total = keys.reduce((s, k) => s + clean[k] / max, 0);
+  const out = {} as Record<K, number>;
+  for (const k of keys) out[k] = (clean[k] / max / total) * 100;
+  return out;
+}
+
 export function adjustCategoryTable(
   raw: Record<Category, number>,
   last: Category | null,
