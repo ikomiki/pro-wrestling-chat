@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test": "bun test",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -15,6 +16,7 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
+    "@types/bun": "^1.4.4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
