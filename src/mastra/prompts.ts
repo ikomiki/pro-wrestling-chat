@@ -1,4 +1,5 @@
-import { CATEGORY_LABEL, ENEMY_TYPE_LABEL, ENEMY_TYPE_TENDENCY, GRADE_LABEL, type Action, type Category, type Grade } from "../game/types";
+import { DAMAGE } from "../game/rules";
+import { CATEGORY_LABEL, ENEMY_TYPE_LABEL, ENEMY_TYPE_TENDENCY, GRADE_LABEL, type Action, type Category, type Grade, type Side } from "../game/types";
 import type { MatchState, SetupInput, TurnLog } from "../game/schema";
 
 const actionText = (a: Action) =>
@@ -76,25 +77,64 @@ export const finishPrompt = (state: MatchState, lastHit: Action) =>
     "出力: { finish }（1 文の短い説明）",
   ].join("\n");
 
-export const scenePrompt = (state: MatchState, enemyAction: Action) =>
+const condition = (f: MatchState["player"]) => {
+  const ratio = f.hp / f.maxHp;
+  return ratio >= 1 ? "万全" : ratio > 0.6 ? "余裕がある" : ratio > 0.3 ? "消耗している" : ratio > 0 ? "瀕死" : "力尽きた";
+};
+
+// 語り手には数値（体力・ターン数）を渡さない。渡すと「第３ラウンド」のように描写へ漏れる
+const narratorSituation = (s: MatchState, prev: string | null) =>
   [
-    "次の場面を描写してください。プレイヤーがこれから行動を選ぶ直前までを書きます。",
-    situation(state),
-    state.turn === 1 ? "これは 1 ターン目です。選手の入場とゴングから書き始めてください。" : "直前の展開を受けて続きを書いてください。",
-    `敵はこの後「${actionText(enemyAction)}」を狙っています。技名や種類は書かず、構え・視線・間合いなどの身体の動きと気配として予兆だけを混ぜてください。`,
-    "実況アナウンサーと解説者のセリフを交え、数値は書かないでください。",
+    `時間: ${s.setting.time}`,
+    `場所: ${s.setting.place}`,
+    `プレイヤー: ${s.player.name}（${s.player.description}）状態: ${condition(s.player)}`,
+    `敵: ${s.enemy.name}（${s.enemy.description}）タイプ: ${ENEMY_TYPE_LABEL[s.setting.enemyType]} 状態: ${condition(s.enemy)}`,
+    ...(prev ? ["直前の描写（これに自然につなげる）:", prev] : []),
   ].join("\n");
 
-export const resultPrompt = (state: MatchState, log: TurnLog) => {
+const narratorRules = [
+  "会場・時刻の説明を繰り返さないでください（最初の場面で一度書けば十分です）。",
+  "ラウンドやターン数を書かないでください（プロレスにラウンドはありません）。",
+  "数値は書かないでください。",
+];
+
+export const scenePrompt = (state: MatchState, enemyAction: Action, prev: string | null) =>
+  [
+    "次の場面を描写してください。プレイヤーがこれから行動を選ぶ直前までを書きます。",
+    narratorSituation(state, prev),
+    state.turn === 1
+      ? "試合の最初の場面です。会場の様子、選手の入場とゴングから書き始めてください。"
+      : "直前の描写の続きを書いてください。入場やゴングはもう済んでいるので書かないでください。",
+    `敵はこの後「${actionText(enemyAction)}」を狙っています。技名や種類は書かず、構え・視線・間合いなどの身体の動きと気配として予兆だけを混ぜてください。`,
+    "実況アナウンサーと解説者のセリフを交えてください。",
+    ...narratorRules,
+  ].join("\n");
+
+const SIDE_LABEL: Record<Side, string> = { player: "プレイヤー", enemy: "敵" };
+const damageText = (n: number) => (n === 0 ? "ダメージなし" : n === 1 ? "軽いダメージ" : n === 2 ? "大きなダメージ" : "深刻なダメージ");
+
+export const resultPrompt = (state: MatchState, log: TurnLog, prev: string | null) => {
   const r = log.result;
-  const hits = r.attempts.map((a) => `${a.side === "player" ? "プレイヤー" : "敵"}の技は${a.hit ? "決まった" : "外れた"}`).join("、");
+  const actionOf = (side: Side) => (side === "player" ? log.playerAction : log.enemyAction);
+  const lines = r.attempts.map((a) => `${SIDE_LABEL[a.side]}の「${actionOf(a.side).name}」は${a.hit ? "決まった" : "外れた"}`);
+  if (r.affinityWinner) {
+    const loser: Side = r.affinityWinner === "player" ? "enemy" : "player";
+    lines.unshift(`${SIDE_LABEL[loser]}の「${actionOf(loser).name}」は相性で潰され、決まらなかった`);
+  }
+  const taken = (side: Side) =>
+    r.attempts.filter((a) => a.hit && a.side !== side).reduce((n, a) => n + DAMAGE[actionOf(a.side).grade], 0);
   return [
     "このターンの結果を描写してください。",
-    situation(state),
+    narratorSituation(state, prev),
     `敵の技: ${actionText(log.enemyAction)}`,
     `プレイヤーの行動: ${log.playerInput}（${actionText(log.playerAction)}）`,
-    `判定: ${hits || "どちらの技も決まらなかった"}`,
-    "この判定どおりに、誰の技が決まり誰が外したかを描いてください。数値は書かないでください。",
+    `判定: ${lines.join("、") || "どちらの技も決まらなかった"}`,
+    taken("player") + taken("enemy") === 0
+      ? "どちらにもダメージはない。"
+      : `受けたダメージ: プレイヤーは${damageText(taken("player"))}、敵は${damageText(taken("enemy"))}`,
+    "この判定どおりに、誰の技が決まり誰が外したかを描いてください。決まらなかった技を当たったように書かないでください。",
+    "格（通常/大技/必殺技）の表現を誇張しないでください。通常の技を「必殺の」「とどめの」などと書かないでください。",
+    ...narratorRules,
     state.status === "finished"
       ? `試合はここで決着します。勝者: ${state.winner === "player" ? "プレイヤー" : "敵"}。決着の様子「${state.finish ?? ""}」で試合を締めてください。`
       : "試合はまだ続きます。",

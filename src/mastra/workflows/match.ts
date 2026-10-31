@@ -18,6 +18,9 @@ const ENEMY_TYPES = Object.keys(ENEMY_TYPE_LABEL) as EnemyType[];
 const even = (labels: readonly string[]) => labels.map((label) => ({ label, weight: 1 }));
 const asOptions = (t: Record<string, number>) => Object.entries(t).map(([label, weight]) => ({ label, weight }));
 
+const lastNarration = async (runId: string) =>
+  (await appDb.listMessages(runId)).findLast((m) => m.role === "narrator")?.text ?? null;
+
 async function narrate(writer: ToolStream, runId: string, prompt: string, state: MatchState, debug: unknown) {
   await writer.custom({ type: "data-narration", data: { kind: "start" } });
   const stream = await narrator.stream(prompt);
@@ -109,7 +112,7 @@ const sceneStep = createStep({
     });
     const pendingEnemy = { name: move.object.name, category, grade };
     const next: MatchState = { ...state, pendingEnemy };
-    await narrate(writer, runId, scenePrompt(next, pendingEnemy), next, {
+    await narrate(writer, runId, scenePrompt(next, pendingEnemy, await lastNarration(runId)), next, {
       enemyTable, gradeTable, categoryPick, gradePick, enemyAction: pendingEnemy,
     });
     return { ...next, enemyTable };
@@ -163,7 +166,7 @@ const resolveStep = createStep({
       });
       next = { ...next, status: "finished", winner: result.winner, finish: fin.object.finish };
     }
-    await narrate(writer, runId, resultPrompt(next, log), next, {
+    await narrate(writer, runId, resultPrompt(next, log, await lastNarration(runId)), next, {
       enemyTable, enemyAction, playerAction, affinityWinner: result.affinityWinner, attempts: result.attempts,
     });
     return next;
