@@ -45,7 +45,7 @@ const setupStep = createStep({
   inputSchema: setupInputSchema,
   outputSchema: matchStateSchema,
   retries: 2,
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData, runId }) => {
     const seeds: Partial<Record<keyof SetupInput, string>> = {};
     for (const key of ["time", "place", "player", "enemy"] as const) {
       if (!inputData[key].trim()) seeds[key] = (await pickWithTool(even(SEEDS[key]))).label;
@@ -66,6 +66,7 @@ const setupStep = createStep({
     });
     const s = res.object;
     const enemyType = s.enemyType === "unknown" ? ((await pickWithTool(even(ENEMY_TYPES))).label as EnemyType) : s.enemyType;
+    await appDb.updateMatch(runId, { title: `${s.playerName} vs ${s.enemyName}` });
     return {
       setting: { time: s.time, place: s.place, enemyType, playerSignature: inputData.playerSignature.trim() || null },
       player: { name: s.playerName, description: s.playerDescription, hp: 5, maxHp: 5 },

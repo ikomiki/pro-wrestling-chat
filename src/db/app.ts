@@ -61,12 +61,13 @@ export function createAppDb(url: string) {
       const rs = await client.execute({ sql: "SELECT * FROM matches WHERE user_id = ? ORDER BY created_at DESC, rowid DESC", args: [userId] });
       return rs.rows.map(toMatch);
     },
-    async updateMatch(id: string, patch: { status?: MatchStatus; state?: unknown }) {
+    async updateMatch(id: string, patch: { status?: MatchStatus; state?: unknown; title?: string }) {
       await ready;
       const sets = ["updated_at = ?"];
       const args: (string | null)[] = [new Date().toISOString()];
       if (patch.status !== undefined) { sets.push("status = ?"); args.push(patch.status); }
       if (patch.state !== undefined) { sets.push("state = ?"); args.push(JSON.stringify(patch.state)); }
+      if (patch.title !== undefined) { sets.push("title = ?"); args.push(patch.title); }
       await client.execute({ sql: `UPDATE matches SET ${sets.join(", ")} WHERE id = ?`, args: [...args, id] });
     },
     async claim(id: string, userId: string, from: MatchStatus) {
