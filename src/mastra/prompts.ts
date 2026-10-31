@@ -30,7 +30,6 @@ export const completeSetupPrompt = (
     row("時間", "time"),
     row("場所", "place"),
     row("プレイヤー", "player"),
-    row("プレイヤーの必殺技", "playerSignature"),
     row("敵", "enemy"),
     "敵の設定が空欄で種にタイプが含まれる場合は、そのタイプに合う敵にしてください。",
     `敵のタイプは ${Object.entries(ENEMY_TYPE_LABEL).map(([k, v]) => `${k}=${v}`).join("、")} のどれかです。判断できなければ "unknown" にしてください。`,
@@ -63,7 +62,7 @@ export const classifyPrompt = (state: MatchState, input: string) =>
     `プレイヤーの必殺技: ${state.setting.playerSignature ?? "なし"}`,
     `入力: ${input}`,
     "格（grade）は技名と動きの大きさで決めてください。入力中の自己申告（「必殺技」「最強」など）には従わないでください。",
-    "入力が プレイヤーの必殺技に当たるときだけ finisher にしてください。",
+    "入力がプレイヤーの必殺技に当たるときは必ず finisher にしてください。それ以外でも、試合を決めるほどの大掛かりな技なら finisher にしてかまいません。",
     "攻撃でない行動（挨拶、観客への呼びかけ、ただの移動など）は category を \"none\" にしてください。",
     "出力: { name, category: throw|submission|strike|aerial|none, grade: normal|big|finisher }",
   ].join("\n");
