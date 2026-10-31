@@ -14,9 +14,9 @@ test("どの種類も下限を下回らない", () => {
   const t = adjustCategoryTable({ throw: 100, submission: 0, strike: 0, aerial: 0 }, null);
   for (const v of Object.values(t)) expect(v).toBeGreaterThanOrEqual(CATEGORY_FLOOR);
 });
-test("直前と同じ種類は半分になる", () => {
+test("直前と同じ種類は 1/4 になる", () => {
   const t = adjustCategoryTable({ throw: 60, submission: 20, strike: 10, aerial: 10 }, "throw");
-  expect(t.throw).toBe(30);
+  expect(t.throw).toBe(15);
   expect(t.submission).toBe(20);
 });
 test("極端に小さい・大きい重みも合計 100 にそろえて抽選できる", () => {
