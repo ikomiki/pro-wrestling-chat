@@ -12,6 +12,11 @@ export type MessageRow = {
 };
 export type AppDb = ReturnType<typeof createAppDb>;
 
+// 進行中にサーバーが落ちると running のまま誰も更新しなくなる。1 ターンの処理はこれより十分短い
+const STALE_RUNNING_MS = 5 * 60 * 1000;
+export const isStaleRunning = (m: MatchRow, now = Date.now()) =>
+  m.status === "running" && now - Date.parse(m.updatedAt) > STALE_RUNNING_MS;
+
 const parse = (v: unknown) => (v == null ? null : JSON.parse(String(v)));
 
 export function createAppDb(url: string) {

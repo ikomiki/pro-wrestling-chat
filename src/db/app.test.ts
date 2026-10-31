@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { createAppDb } from "./app";
+import { createAppDb, isStaleRunning } from "./app";
 
 test("他人の試合は取得できない", async () => {
   const db = createAppDb(":memory:");
@@ -23,4 +23,14 @@ test("メッセージは追加順に返る", async () => {
   const rows = await db.listMessages(id);
   expect(rows.map(r => r.text)).toEqual(["a", "b"]);
   expect(rows[0].debug).toEqual({ x: 1 });
+});
+test("5 分以上更新のない running だけが止まった扱いになる", async () => {
+  const db = createAppDb(":memory:");
+  const id = await db.createMatch({ userId: "u1", title: "t", setup: {} });
+  await db.claim(id, "u1", "new");
+  const m = (await db.getMatch(id, "u1"))!;
+  const t = Date.parse(m.updatedAt);
+  expect(isStaleRunning(m, t + 60_000)).toBe(false);
+  expect(isStaleRunning(m, t + 6 * 60_000)).toBe(true);
+  expect(isStaleRunning({ ...m, status: "awaiting_input" }, t + 6 * 60_000)).toBe(false);
 });

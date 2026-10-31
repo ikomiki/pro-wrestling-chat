@@ -1,4 +1,4 @@
-import { appDb, type MatchStatus } from "@/db/app";
+import { appDb, isStaleRunning, type MatchStatus } from "@/db/app";
 import { isDebug, toClientState } from "@/game/client-state";
 import type { MatchState, SetupInput } from "@/game/schema";
 import { auth } from "@/lib/auth";
@@ -12,6 +12,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const { id } = await ctx.params;
   const match = await appDb.getMatch(id, userId);
   if (!match) return new Response(null, { status: 404 });
+  if (isStaleRunning(match)) {
+    await appDb.updateMatch(id, { status: "failed" });
+    return new Response(null, { status: 409 });
+  }
 
   let text: string | null = null;
   if (match.status === "awaiting_input") {
