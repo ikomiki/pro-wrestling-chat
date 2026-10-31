@@ -25,7 +25,13 @@ export default function LoginPage() {
       ? await authClient.signUp.email({ email, password, name: String(f.get("name")) })
       : await authClient.signIn.email({ email, password });
     setPending(false);
-    if (error) return setError(error.message ?? "失敗しました");
+    if (error) {
+      return setError(
+        signUp
+          ? "登録できませんでした。すでに登録済みのメールアドレスでないか確認してください。"
+          : "メールアドレスまたはパスワードが違います。",
+      );
+    }
     router.push("/");
     router.refresh();
   }
