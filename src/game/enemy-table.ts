@@ -1,7 +1,7 @@
 import type { Category } from "./types";
 
 export const CATEGORY_FLOOR = 10;
-export const REPEAT_FACTOR = 0.5;
+export const REPEAT_FACTOR = 0.25;
 
 export function sanitizeWeights<K extends string>(raw: Record<K, number>): Record<K, number> {
   const keys = Object.keys(raw) as K[];
