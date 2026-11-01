@@ -1,13 +1,13 @@
 # pro-wrestling-chat
 
-1 対 1 のターン制プロレスをチャットで遊ぶゲーム。実況は小説風の日本語で、Gemini が書く。乱数は Mastra のツールが `crypto` で引く。
+1 対 1 のターン制プロレスをチャットで遊ぶゲーム。実況は小説風の日本語で、AI（Gemini または OpenAI 互換のローカルモデル）が書く。乱数は Mastra のツールが `crypto` で引く。
 
 ローカルでの利用を想定しているため、ガードレールは入れていない。
 
 ## 技術スタック
 
 - Next.js 16（App Router、`cacheComponents`）
-- Mastra（agent・workflow・tool）、モデルは Gemini
+- Mastra（agent・workflow・tool）、モデルは Gemini か OpenAI 互換サーバー
 - Better Auth（メールアドレスとパスワード）
 - libSQL（SQLite ファイル）
 - shadcn/ui、AI Elements
@@ -29,7 +29,11 @@ http://localhost:3000 を開き、ログイン画面の「新規登録はこち�
 
 | 変数 | 内容 |
 |---|---|
-| `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini の API キー |
+| `AI_PROVIDER` | `gemini`（既定）か `openai-compatible`（LM Studio・Ollama など） |
+| `AI_MODEL` | モデル ID。Gemini の既定は `gemini-3.8-flash`。`openai-compatible` では必須（`/v1/models` が返す ID） |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini の API キー。`gemini` のときだけ使う |
+| `OPENAI_COMPATIBLE_BASE_URL` | OpenAI 互換サーバーの URL。既定は `http://localhost:1234/v1`（LM Studio）。Ollama は `http://localhost:11434/v1` |
+| `OPENAI_COMPATIBLE_API_KEY` | OpenAI 互換サーバーの API キー。ローカルサーバーなら空でよい |
 | `BETTER_AUTH_SECRET` | セッション署名用の秘密値（例: `openssl rand -base64 32`） |
 | `BETTER_AUTH_URL` | アプリの URL。通常は `http://localhost:3000` |
 | `DEBUG_MODE` | `true` で試合画面にデバッグパネルを出し、敵の次の手と判定ログを返す |
@@ -44,7 +48,7 @@ http://localhost:3000 を開き、ログイン画面の「新規登録はこち�
 | `bun run lint` | ESLint |
 | `bunx tsc --noEmit` | 型検査 |
 | `bun run db:migrate` | Better Auth のテーブルを作成・更新する |
-| `bun scripts/smoke-match.ts` | ブラウザーを使わずに 1 試合を最後まで流す。Gemini を呼ぶので費用がかかる |
+| `bun scripts/smoke-match.ts` | ブラウザーを使わずに 1 試合を最後まで流す。AI を呼ぶので、Gemini では費用がかかる |
 
 ## データ
 
