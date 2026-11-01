@@ -36,6 +36,8 @@ http://localhost:3000 を開き、ログイン画面の「新規登録はこち�
 | `OPENAI_COMPATIBLE_API_KEY` | OpenAI 互換サーバーの API キー。ローカルサーバーなら空でよい |
 | `BETTER_AUTH_SECRET` | セッション署名用の秘密値（例: `openssl rand -base64 32`） |
 | `BETTER_AUTH_URL` | アプリの URL。通常は `http://localhost:3000` |
+| `MASTRA_PLATFORM_ACCESS_TOKEN` | Mastra Platform のアクセストークン。Platform と連携するときだけ使い、ローカルでは空でよい |
+| `MASTRA_PROJECT_ID` | Mastra Platform のプロジェクト ID（UUID）。Platform と連携するときだけ使い、ローカルでは空でよい |
 | `DEBUG_MODE` | `true` で試合画面にデバッグパネルを出し、敵の次の手と判定ログを返す |
 
 ## スクリプト
@@ -49,6 +51,16 @@ http://localhost:3000 を開き、ログイン画面の「新規登録はこち�
 | `bunx tsc --noEmit` | 型検査 |
 | `bun run db:migrate` | Better Auth のテーブルを作成・更新する |
 | `bun scripts/smoke-match.ts` | ブラウザーを使わずに 1 試合を最後まで流す。AI を呼ぶので、Gemini では費用がかかる |
+
+## Mastra Studio
+
+agent と試合 workflow を、ブラウザーから個別に動かしたり実行履歴を見たりできる。
+
+```bash
+bunx mastra@latest dev
+```
+
+http://localhost:4111 を開く（API は http://localhost:4111/api）。`.env.local` を読み、`data/mastra.db` をアプリと共有する。`@latest` を付けるのは、`node_modules` に古い mastra CLI が残っていると起動に失敗することがあるため。
 
 ## データ
 
