@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>プロレスチャット ゲームのルール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu+Sans:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./design-system/document.css">
+</head>
+<body>
+<div class="mb-page">
+
+<div class="mb-hero">
+
+<header class="mb-header">
+  <div>
+    <h1>プロレスチャット ゲームのルール</h1>
+    <p class="mb-meta-line">pro-wrestling-chat / rules</p>
+  </div>
+</header>
+
+<p class="mb-lede">
+あなたのレスラーと敵のレスラーが 1 対 1 で戦います。
+毎ターン、試合の様子が小説のように描かれるので、それを読んで次の動きを文章で入力してください。
+先に相手の体力を 0 にしたほうが勝ちです。
+</p>
+
+<nav class="mb-toc">
+  <ol>
+    <li><a href="#start">試合を始める</a></li>
+    <li><a href="#turn">1 ターンの流れ</a></li>
+    <li><a href="#moves">技の種類と格</a></li>
+    <li><a href="#affinity">相性</a></li>
+    <li><a href="#rate">成功率とダメージ</a></li>
+    <li><a href="#enemy">敵の動き</a></li>
+    <li><a href="#finish">決着</a></li>
+  </ol>
+</nav>
+
+<div class="mb-summary">
+  <ul>
+    <li>体力は両者とも 5 から始まる。1 試合はおおむね 3〜6 ターン</li>
+    <li>相性は 投げ技 &gt; 打撃技 &gt; 極め技 &gt; 投げ技。飛び技は相性を持たない</li>
+    <li>大技ほど決まりにくい。ただし相手が弱っているほど決まりやすくなる</li>
+  </ul>
+</div>
+
+</div><!-- /.mb-hero -->
+
+<div class="mb-wrap">
+<main class="mb-main">
+
+<h2 id="start">試合を始める</h2>
+
+<p>
+「新しい試合」から、次の 5 項目を入力して試合を作ります。
+どれも空欄のままでかまいません。空欄にした項目は AI が適当に埋めます。
+</p>
+
+<table>
+  <tr><th class="mb-rowlabel">項目</th><th>入力例</th></tr>
+  <tr><td class="mb-rowlabel">時刻</td><td>真夏の夜 20 時</td></tr>
+  <tr><td class="mb-rowlabel">場所</td><td>地方の体育館、満員の観客</td></tr>
+  <tr><td class="mb-rowlabel">プレイヤーの設定</td><td>デビュー 3 年目の若手。負けず嫌いのベビーフェイス</td></tr>
+  <tr><td class="mb-rowlabel">得意技（任意）</td><td>ムーンサルト・プレス</td></tr>
+  <tr><td class="mb-rowlabel">敵の設定</td><td>身長 2 メートルのベテラン悪役</td></tr>
+</table>
+
+<p>
+得意技を登録しておくと、試合中にその技を出したときに必ず必殺技として扱われます。
+敵の設定からは、敵のタイプ（巨漢、スピード、マッチョ、技巧派）が決まります。
+</p>
+
+<h2 id="turn">1 ターンの流れ</h2>
+
+<ol>
+  <li>試合の情景が描かれます。敵が次に何を狙っているかは名指しされませんが、構えや目線などに予兆として混ざっています。</li>
+  <li>あなたが行動を自由に書きます。「バックドロップ」のような技名でも、「ロープに走ってドロップキック」のような動きでもかまいません。</li>
+  <li>両者の技がぶつかり、決まったかどうかが判定されます。その結果が描かれ、体力が減ります。</li>
+</ol>
+
+<p>
+途中でページを閉じても、試合一覧から開けば入力待ちの状態から続けられます。
+終わった試合も最後まで読み返せます。
+</p>
+
+<h2 id="moves">技の種類と格</h2>
+
+<p>
+入力した行動は、種類と格に分類されます。敵の技も同じ分類を持ちます。
+</p>
+
+<div class="mb-grid-2">
+  <div class="mb-card">
+    <div class="mb-card-title">種類</div>
+    <p>
+      <span class="mb-chip">投げ技</span>
+      <span class="mb-chip">打撃技</span>
+      <span class="mb-chip">極め技</span>
+      <span class="mb-chip">飛び技</span>
+    </p>
+    <p>挑発、様子見、観客へのアピールのように攻撃でない行動は「技なし」になります。</p>
+  </div>
+  <div class="mb-card">
+    <div class="mb-card-title">格</div>
+    <p>
+      <span class="mb-chip">通常</span>
+      <span class="mb-chip">大技</span>
+      <span class="mb-chip">必殺技</span>
+    </p>
+    <p>格は技名と動きの大きさで決まります。「必殺技を出す」と書いても、それだけでは必殺技になりません。</p>
+  </div>
+</div>
+
+<h2 id="affinity">相性</h2>
+
+<p>
+投げ技、打撃技、極め技の 3 種類は三すくみです。
+種類の違う技がぶつかると、<em>相性で勝った側の技だけが判定に進み</em>、負けた側の技は潰されて何も起きません。
+</p>
+
+<figure class="mb-figure">
+  <div class="mb-figure-frame">
+    <svg viewBox="0 0 420 300" width="420" role="img" aria-label="投げ技は打撃技に、打撃技は極め技に、極め技は投げ技に勝つ">
+      <defs>
+        <marker id="head" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M0 0 L10 5 L0 10 Z" fill="#111110"/>
+        </marker>
+      </defs>
+      <g fill="none" stroke="#111110" stroke-width="2">
+        <rect x="150" y="20" width="120" height="46" rx="10"/>
+        <rect x="280" y="230" width="120" height="46" rx="10"/>
+        <rect x="20" y="230" width="120" height="46" rx="10"/>
+        <line x1="240" y1="66" x2="318" y2="228" marker-end="url(#head)"/>
+        <line x1="280" y1="253" x2="142" y2="253" marker-end="url(#head)"/>
+        <line x1="102" y1="230" x2="180" y2="68" marker-end="url(#head)"/>
+      </g>
+      <g font-family="Ubuntu Sans, Noto Sans JP, sans-serif" font-size="16" fill="#111110" text-anchor="middle">
+        <text x="210" y="49">投げ技</text>
+        <text x="340" y="259">打撃技</text>
+        <text x="80" y="259">極め技</text>
+      </g>
+      <g font-family="Ubuntu Sans, Noto Sans JP, sans-serif" font-size="13" fill="#595959" text-anchor="middle">
+        <text x="300" y="145">勝つ</text>
+        <text x="210" y="243">勝つ</text>
+        <text x="120" y="145">勝つ</text>
+      </g>
+    </svg>
+  </div>
+  <figcaption>図 1　矢印の根元にある種類が、矢印の先の種類に勝つ</figcaption>
+</figure>
+
+<p>相性で決まらない組み合わせでは、両者の技をそれぞれ判定します。</p>
+
+<ul>
+  <li>同じ種類どうしがぶつかったとき</li>
+  <li>どちらかが飛び技のとき</li>
+</ul>
+
+<p>
+この場合は両方決まることもあり、そのときは相打ちで両者がダメージを受けます。両方とも外れればダメージはありません。
+あなたが技なしを選んだターンは、敵の技だけが判定されます。
+</p>
+
+<h2 id="rate">成功率とダメージ</h2>
+
+<p>
+技が決まる確率は、技を受ける側の残り体力で変わります。技をかける側の体力は関係ありません。
+相手が弱るほど、大技や必殺技が通りやすくなります。
+</p>
+
+<table>
+  <tr><th class="mb-rowlabel">受ける側の体力</th><th>通常 / 大技 / 必殺技</th></tr>
+  <tr><td class="mb-rowlabel">4〜5</td><td>90% / 50% / 20%</td></tr>
+  <tr><td class="mb-rowlabel">2〜3</td><td>95% / 70% / 45%</td></tr>
+  <tr><td class="mb-rowlabel">1</td><td>100% / 90% / 70%</td></tr>
+</table>
+
+<p>
+決まったときのダメージは、通常が 1、大技が 2、必殺技が 3 です。
+体力が満タンの相手に必殺技を狙っても 5 回に 1 回しか決まらないので、序盤は通常の技で削り、相手の体力が 1 か 2 になってから大技を狙うのが堅実です。
+判定に使う乱数はプログラムが引いており、AI は数値を決めません。
+</p>
+
+<h2 id="enemy">敵の動き</h2>
+
+<p>敵はタイプごとに得意な種類を持ち、その種類を選びやすくなります。</p>
+
+<table>
+  <tr><th class="mb-rowlabel">タイプ</th><th>よく使う種類</th></tr>
+  <tr><td class="mb-rowlabel">巨漢</td><td>投げ技</td></tr>
+  <tr><td class="mb-rowlabel">スピード</td><td>飛び技</td></tr>
+  <tr><td class="mb-rowlabel">マッチョ</td><td>打撃技</td></tr>
+  <tr><td class="mb-rowlabel">技巧派</td><td>極め技</td></tr>
+</table>
+
+<p>
+ただし毎ターン同じ種類が来るわけではありません。
+どの種類にも一定の確率が残っていますし、直前のターンと同じ種類は選ばれにくくなっています。
+敵は自分の体力が減るほど大技や必殺技に頼るようになります。
+得意な種類と情景の予兆を手がかりに、相性で勝てる技を選んでください。
+</p>
+
+<h2 id="finish">決着</h2>
+
+<p>
+どちらかの体力が 0 になった時点で試合が終わります。
+決着の形（3 カウント、ギブアップ、場外負けなど）は試合の流れに合わせて描かれ、最後に決まった技が極め技ならギブアップになるのが基本です。
+相打ちで両者の体力が同時に 0 になったときは、勝者を乱数で決めます。
+</p>
+
+<p>
+試合が終わると入力欄が閉じ、最後の描写の末尾に <code>&lt;&lt;END&gt;&gt;</code> が付きます。
+</p>
+
+</main>
+</div><!-- /.mb-wrap -->
+
+<footer class="mb-footer">pro-wrestling-chat</footer>
+
+</div>
+</body>
+</html>
