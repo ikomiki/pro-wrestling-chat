@@ -1,8 +1,9 @@
 import { Agent } from "@mastra/core/agent";
 
 const env = process.env;
+const local = env.AI_PROVIDER === "openai-compatible";
 const model =
-  env.AI_PROVIDER === "openai-compatible"
+  local
     ? {
         providerId: "openai-compatible",
         modelId: env.AI_MODEL ?? "",
@@ -29,4 +30,6 @@ export const narrator = new Agent({
     "1 回の描写は 400 字から 800 字にしてください。",
   ].join("\n"),
   model,
+  // 小さいローカルモデルは描写を終えられず書き続けることがあるため上限で切る。Gemini は思考トークンも上限に含むので掛けない
+  ...(local && { defaultOptions: { modelSettings: { maxOutputTokens: 2000 } } }),
 });
