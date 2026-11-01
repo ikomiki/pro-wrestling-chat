@@ -31,5 +31,5 @@ export const narrator = new Agent({
   ].join("\n"),
   model,
   // 小さいローカルモデルは描写を終えられず書き続けることがあるため上限で切る。Gemini は思考トークンも上限に含むので掛けない
-  ...(local && { defaultOptions: { modelSettings: { maxOutputTokens: 2000 } } }),
+  ...(local && { defaultOptions: { modelSettings: { maxOutputTokens: 1200 } } }),
 });
