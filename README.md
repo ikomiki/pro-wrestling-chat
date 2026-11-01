@@ -1,38 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# pro-wrestling-chat
 
-## Getting Started
+1 対 1 のターン制プロレスをチャットで遊ぶゲーム。実況は小説風の日本語で、Gemini が書く。乱数は Mastra のツールが `crypto` で引く。
 
-初回は `.env.example` を `.env.local` にコピーして値を埋め、`bun run db:migrate` で認証テーブルを作ってから `bun dev` を起動する。
+ローカルでの利用を想定しているため、ガードレールは入れていない。
 
-First, run the development server:
+## 技術スタック
+
+- Next.js 16（App Router、`cacheComponents`）
+- Mastra（agent・workflow・tool）、モデルは Gemini
+- Better Auth（メールアドレスとパスワード）
+- libSQL（SQLite ファイル）
+- shadcn/ui、AI Elements
+
+パッケージ管理とスクリプト実行には bun だけを使う。
+
+## セットアップ
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
+cp .env.example .env.local   # 値を埋める
+bun run db:migrate           # 認証テーブルを作る
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000 を開き、ログイン画面の「新規登録はこちら」からユーザーを作る。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 環境変数（`.env.local`）
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| 変数 | 内容 |
+|---|---|
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini の API キー |
+| `BETTER_AUTH_SECRET` | セッション署名用の秘密値（例: `openssl rand -base64 32`） |
+| `BETTER_AUTH_URL` | アプリの URL。通常は `http://localhost:3000` |
+| `DEBUG_MODE` | `true` で試合画面にデバッグパネルを出し、敵の次の手と判定ログを返す |
 
-## Learn More
+## スクリプト
 
-To learn more about Next.js, take a look at the following resources:
+| コマンド | 内容 |
+|---|---|
+| `bun dev` | 開発サーバー |
+| `bun run build` / `bun start` | 本番ビルドと起動 |
+| `bun test` | ユニットテスト |
+| `bun run lint` | ESLint |
+| `bunx tsc --noEmit` | 型検査 |
+| `bun run db:migrate` | Better Auth のテーブルを作成・更新する |
+| `bun scripts/smoke-match.ts` | ブラウザーを使わずに 1 試合を最後まで流す。Gemini を呼ぶので費用がかかる |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## データ
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+すべて `data/` に置く（git 管理外）。消せば初期状態に戻る。消した後は `bun run db:migrate` をやり直す。
 
-## Deploy on Vercel
+| ファイル | 中身 |
+|---|---|
+| `data/auth.db` | Better Auth のユーザーとセッション |
+| `data/app.db` | 試合とチャットのメッセージ |
+| `data/mastra.db` | Mastra の workflow の実行状態 |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## ディレクトリ
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| パス | 役割 |
+|---|---|
+| `src/game/` | ルール、相性と成功率、敵の行動テーブル、乱数、状態のスキーマ |
+| `src/mastra/` | agent（実況と技の分類）、プロンプト、乱数ツール、試合 workflow |
+| `src/db/app.ts` | 試合とメッセージの読み書き |
+| `src/lib/` | Better Auth のサーバー・クライアント設定、セッション取得 |
+| `src/app/api/matches/` | 試合の作成と進行の API（NDJSON でストリーミングする） |
+| `src/app/` | 画面（トップ、ログイン、新規試合、試合） |
+| `src/components/match/` | 試合のチャット、HP バー、デバッグパネル |
+| `src/proxy.ts` | 未ログイン時にログイン画面へ転送する |
+| `docs/superpowers/` | 設計書と実装計画 |
+
+## ゲームの仕組み
+
+試合は Mastra の workflow で進める。初期設定を作った後、1 ターンを次の 3 段で繰り返す。
+
+1. 場面の描写
+2. プレイヤーの行動入力。ここで workflow を中断して入力を待つ
+3. 判定と実況
+
+ルールの要点は次のとおり。
+
+- 相性は「投げ > 打撃 > 関節 > 投げ」の三すくみで、空中技は相性を持たない
+- 成功率は、守る側の残り HP の割合で決まる
+- HP は 5 から始まり、ダメージは 1〜3
+
+細かい仕様は `docs/superpowers/specs/` の設計書を参照。
