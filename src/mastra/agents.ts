@@ -1,6 +1,15 @@
 import { Agent } from "@mastra/core/agent";
 
-const model = "google/gemini-3.8-flash";
+const env = process.env;
+const model =
+  env.AI_PROVIDER === "openai-compatible"
+    ? {
+        providerId: "openai-compatible",
+        modelId: env.AI_MODEL ?? "",
+        url: env.OPENAI_COMPATIBLE_BASE_URL || "http://localhost:1234/v1",
+        apiKey: env.OPENAI_COMPATIBLE_API_KEY,
+      }
+    : (`google/${env.AI_MODEL || "gemini-3.8-flash"}` as const);
 
 export const analyst = new Agent({
   id: "analyst",
