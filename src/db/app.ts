@@ -1,5 +1,5 @@
 import { createClient } from "@libsql/client";
-import { mkdirSync } from "node:fs";
+import { sqliteUrl } from "./path";
 
 export type MatchStatus = "new" | "running" | "awaiting_input" | "finished" | "failed";
 export type MatchRow = {
@@ -101,8 +101,7 @@ let singleton: AppDb | undefined;
 export const appDb: AppDb = new Proxy({} as AppDb, {
   get(_, k) {
     if (!singleton) {
-      mkdirSync("data", { recursive: true });
-      singleton = createAppDb("file:data/app.db");
+      singleton = createAppDb(sqliteUrl("app.db"));
     }
     return singleton[k as keyof AppDb];
   },
