@@ -34,6 +34,7 @@ http://localhost:3000 を開き、ログイン画面の「新規登録はこち�
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini の API キー。`gemini` のときだけ使う |
 | `OPENAI_COMPATIBLE_BASE_URL` | OpenAI 互換サーバーの URL。既定は `http://localhost:1234/v1`（LM Studio）。Ollama は `http://localhost:11434/v1` |
 | `OPENAI_COMPATIBLE_API_KEY` | OpenAI 互換サーバーの API キー。ローカルサーバーなら空でよい |
+| `AI_THINKING` | 思考の量。`off` / `minimal` / `low` / `medium` / `high`。空ならモデルの既定。詳しくは下の「思考（thinking）の調整」 |
 | `BETTER_AUTH_SECRET` | セッション署名用の秘密値（例: `openssl rand -base64 32`） |
 | `BETTER_AUTH_URL` | アプリの URL。通常は `http://localhost:3000` |
 | `MASTRA_PLATFORM_ACCESS_TOKEN` | Mastra Platform のアクセストークン。Platform と連携するときだけ使い、ローカルでは空でよい |
@@ -41,6 +42,23 @@ http://localhost:3000 を開き、ログイン画面の「新規登録はこち�
 | `DEBUG_MODE` | `true` で試合画面にデバッグパネルを出し、敵の次の手と判定ログを返す |
 
 アプリが読んでいる値は、ログインした状態で http://localhost:3000/env を直接開くと確認できる（画面内にリンクはない）。API キーやシークレットは頭と末尾の 4 文字だけを表示する。
+
+### 思考（thinking）の調整
+
+`AI_THINKING` を設定すると、サーバーごとに効く指定をまとめて送る（`src/mastra/agents.ts`）。知らない指定はサーバーが無視する。
+
+| 送るもの | 効くサーバー・モデル |
+|---|---|
+| `reasoning_effort`（`off` は `none`） | Ollama・llama.cpp・vLLM・LM Studio 0.4.8 以降 |
+| `chat_template_kwargs.enable_thinking` | vLLM・SGLang・llama.cpp の Qwen3 / Qwen3.5 |
+| システムプロンプト末尾の `/no_think`（`off` のときだけ） | 初代 Qwen3。Qwen3.5 と Qwen3-2507 は無視する |
+| `thinkingConfig.thinkingLevel`（Gemini） | Gemini 3。思考は止められないので `off` は `low` になる。gemini-3.8-flash は `minimal` を受け付けない |
+
+リクエストで止めきれない場合は、サーバー側で既定を変える。
+
+- LM Studio: Qwen3.5 は `/v1` 経由の指定を無視することがある。モデル設定で思考を切るか、プロンプトテンプレートを ChatML にする
+- llama.cpp: `llama-server --reasoning-budget 0`
+- vLLM: `--default-chat-template-kwargs '{"enable_thinking": false}'`
 
 ## スクリプト
 

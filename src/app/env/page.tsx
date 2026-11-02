@@ -9,6 +9,7 @@ const VARS: { name: string; secret?: boolean }[] = [
   { name: "GOOGLE_GENERATIVE_AI_API_KEY", secret: true },
   { name: "OPENAI_COMPATIBLE_BASE_URL" },
   { name: "OPENAI_COMPATIBLE_API_KEY", secret: true },
+  { name: "AI_THINKING" },
   { name: "BETTER_AUTH_SECRET", secret: true },
   { name: "BETTER_AUTH_URL" },
   { name: "MASTRA_PLATFORM_ACCESS_TOKEN", secret: true },

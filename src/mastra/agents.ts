@@ -1,4 +1,4 @@
-import { Agent } from "@mastra/core/agent";
+import { Agent, type AgentExecutionOptions } from "@mastra/core/agent";
 import { STYLE_EXAMPLES } from "./style-examples";
 
 const env = process.env;
@@ -13,12 +13,31 @@ const model =
       }
     : (`google/${env.AI_MODEL || "gemini-3.8-flash"}` as const);
 
+// サーバーごとに効く指定が違うので、効きうるものを全部送る。知らないフィールドは各サーバーが無視する
+// - reasoning_effort: Ollama・llama.cpp・vLLM（"none" で無効）、LM Studio 0.4.8 以降
+// - chat_template_kwargs.enable_thinking: vLLM・SGLang・llama.cpp の Qwen3 / Qwen3.5 テンプレート
+// - /no_think: 初代 Qwen3 のみ。Qwen3.5 は無視する
+// Gemini 3 は思考を完全には止められないので、off は最も軽い low にする
+const thinking = env.AI_THINKING || undefined;
+const providerOptions: AgentExecutionOptions["providerOptions"] = !thinking
+  ? undefined
+  : local
+    ? {
+        openaiCompatible: {
+          reasoningEffort: thinking === "off" ? "none" : thinking,
+          chat_template_kwargs: { enable_thinking: thinking !== "off" },
+        },
+      }
+    : { google: { thinkingConfig: { thinkingLevel: thinking === "off" ? "low" : (thinking as "minimal" | "low" | "medium" | "high") } } };
+const noThink = local && thinking === "off" ? "\n/no_think" : "";
+
 export const analyst = new Agent({
   id: "analyst",
   name: "プロレス技の分類者",
   instructions:
-    "あなたはプロレスの技の分類者です。与えられた指示に従い、指定されたスキーマの出力だけを返してください。説明や前置きは書きません。",
+    "あなたはプロレスの技の分類者です。与えられた指示に従い、指定されたスキーマの出力だけを返してください。説明や前置きは書きません。" + noThink,
   model,
+  defaultOptions: { providerOptions },
 });
 
 export const narrator = new Agent({
@@ -35,8 +54,11 @@ export const narrator = new Agent({
     "",
     "## 文体の見本（内容は真似せず、文体とセリフの比率だけを真似る）",
     ...STYLE_EXAMPLES.map((e) => `### 見本: ${e.title}\n入力:\n${e.input}\n出力:\n${e.output}`),
-  ].join("\n"),
+  ].join("\n") + noThink,
   model,
-  // 小さいローカルモデルは描写を終えられず書き続けることがあるため上限で切る。Gemini は思考トークンも上限に含むので掛けない
-  ...(local && { defaultOptions: { modelSettings: { maxOutputTokens: 1200 } } }),
+  defaultOptions: {
+    providerOptions,
+    // 小さいローカルモデルは描写を終えられず書き続けることがあるため上限で切る。Gemini は思考トークンも上限に含むので掛けない
+    ...(local && { modelSettings: { maxOutputTokens: 1200 } }),
+  },
 });
