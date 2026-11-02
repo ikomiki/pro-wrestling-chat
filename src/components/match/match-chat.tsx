@@ -31,6 +31,7 @@ type Event =
   | { type: "delta"; text: string }
   | { type: "state"; state: ClientState; status: MatchStatus }
   | { type: "debug"; data: unknown }
+  | { type: "progress"; label: string }
   | { type: "error"; message: string };
 
 const END = "<<END>>";
@@ -53,6 +54,7 @@ export function MatchChat({ matchId, initialStatus, initialState, initialMessage
   const [state, setState] = useState(initialState);
   const [lastDebug, setLastDebug] = useState<unknown>(() => initialMessages.findLast((m) => m.role === "narrator")?.debug ?? null);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   // ワークフローの再試行で同じ描写の start が再送されることがあるので、未確定の吹き出しは置き換える
   const liveRef = useRef(false);
@@ -64,6 +66,7 @@ export function MatchChat({ matchId, initialStatus, initialState, initialMessage
         setMessages((ms) => [...ms, { role: e.role, text: e.text }]);
         break;
       case "start": {
+        setProgress(null);
         const replace = liveRef.current;
         liveRef.current = true;
         setMessages((ms) => [...(replace ? ms.slice(0, -1) : ms), { role: "narrator", text: "" }]);
@@ -78,13 +81,18 @@ export function MatchChat({ matchId, initialStatus, initialState, initialMessage
         break;
       case "state":
         liveRef.current = false;
+        setProgress(null);
         setState(e.state);
         setStatus(e.status);
         break;
       case "debug":
         setLastDebug(e.data);
         break;
+      case "progress":
+        setProgress(e.label);
+        break;
       case "error":
+        setProgress(null);
         setNotice(e.message);
         setStatus("failed");
         break;
@@ -137,6 +145,7 @@ export function MatchChat({ matchId, initialStatus, initialState, initialMessage
         return false;
       } finally {
         liveRef.current = false;
+        setProgress(null);
         setBusy(false);
       }
     },
@@ -179,7 +188,12 @@ export function MatchChat({ matchId, initialStatus, initialState, initialMessage
               </MessageContent>
             </Message>
           ))}
-          {busy && messages.at(-1)?.role !== "narrator" && <p className="text-sm text-muted-foreground">描写を待っています...</p>}
+          {busy &&
+            (progress ? (
+              <p className="text-sm text-muted-foreground">{progress}</p>
+            ) : (
+              messages.at(-1)?.role !== "narrator" && <p className="text-sm text-muted-foreground">描写を待っています...</p>
+            ))}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
