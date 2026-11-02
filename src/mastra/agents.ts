@@ -65,6 +65,8 @@ export const narrator = new Agent({
   defaultOptions: {
     providerOptions,
     // 小さいローカルモデルは描写を終えられず書き続けることがあるため上限で切る。Gemini は思考トークンも上限に含むので掛けない
-    ...(local && { modelSettings: { maxOutputTokens: 1200 } }),
+    // ローカルでも思考トークンは上限に含まれ、思考だけで使い切ると本文が空になるので、思考する場合は余裕を持たせる
+    // ponytail: 思考の長さは読めないので固定値。まだ空になるなら AI_THINKING=off か low を使う
+    ...(local && { modelSettings: { maxOutputTokens: thinking === "off" ? 1200 : 6000 } }),
   },
 });
