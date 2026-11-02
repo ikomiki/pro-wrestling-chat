@@ -18,6 +18,12 @@ const ENEMY_TYPES = Object.keys(ENEMY_TYPE_LABEL) as EnemyType[];
 const even = (labels: readonly string[]) => labels.map((label) => ({ label, weight: 1 }));
 const asOptions = (t: Record<string, number>) => Object.entries(t).map(([label, weight]) => ({ label, weight }));
 
+// 本文から外したモデルの思考（<think> や reasoning_content）を、試合ごとの履歴として残す
+async function saveReasoning(matchId: string, label: string, reasoning: string | undefined | Promise<string | undefined>) {
+  const text = (await reasoning)?.trim();
+  if (text) await appDb.appendReasoning({ matchId, label, text });
+}
+
 const progress = (writer: ToolStream, label: string) => writer.custom({ type: "data-progress", data: { label } });
 
 async function narrate(writer: ToolStream, runId: string, prompt: string, state: MatchState, debug: Record<string, unknown>) {
@@ -34,6 +40,7 @@ async function narrate(writer: ToolStream, runId: string, prompt: string, state:
     await writer.custom({ type: "data-narration", data: { kind: "delta", text: end } });
   }
   await writer.custom({ type: "data-narration", data: { kind: "end" } });
+  await saveReasoning(runId, "narrate", stream.reasoningText);
   await appDb.appendMessage({ matchId: runId, role: "narrator", text, debug: { ...debug, prompt } });
   await appDb.updateMatch(runId, { state, ...(state.status === "finished" && { status: "finished" as const }) });
   await writer.custom({ type: "data-state", data: state });
@@ -66,6 +73,7 @@ const setupStep = createStep({
         }),
       },
     });
+    await saveReasoning(runId, "setup", res.reasoningText);
     const s = res.object;
     const enemyType = seededType ?? (s.enemyType === "unknown" ? ((await pickWithTool(even(ENEMY_TYPES))).label as EnemyType) : s.enemyType);
     await appDb.updateMatch(runId, { title: `${s.playerName} vs ${s.enemyName}` });
@@ -105,6 +113,7 @@ const sceneStep = createStep({
         }),
       },
     });
+    await saveReasoning(runId, "enemyTable", table.reasoningText);
     const lastCategory = state.enemyHistory.at(-1)?.category;
     const enemyTable = adjustCategoryTable(table.object.category, lastCategory && lastCategory !== "none" ? lastCategory : null);
     const gradeTable = normalizeWeights(table.object.grade);
@@ -115,6 +124,7 @@ const sceneStep = createStep({
     const move = await analyst.generate(enemyMovePrompt(state, category, grade), {
       structuredOutput: { schema: z.object({ name: z.string() }) },
     });
+    await saveReasoning(runId, "enemyMove", move.reasoningText);
     const pendingEnemy = { name: move.object.name, category, grade };
     const next: MatchState = { ...state, pendingEnemy };
     await narrate(writer, runId, scenePrompt(next, pendingEnemy), next, {
@@ -154,6 +164,7 @@ const resolveStep = createStep({
     const classified = await analyst.generate(classifyPrompt(state, playerInput), {
       structuredOutput: { schema: actionSchema },
     });
+    await saveReasoning(runId, "classify", classified.reasoningText);
     const playerAction = classified.object;
     const result = resolveTurn({ player: state.player, enemy: state.enemy, playerAction, enemyAction }, cryptoRng);
     const log = { turn: state.turn, enemyTable, enemyAction, playerInput, playerAction, result };
@@ -171,12 +182,14 @@ const resolveStep = createStep({
       const fin = await analyst.generate(finishPrompt(next, lastHit), {
         structuredOutput: { schema: z.object({ finish: z.string() }) },
       });
+      await saveReasoning(runId, "finish", fin.reasoningText);
       next = { ...next, status: "finished", winner: result.winner, finish: fin.object.finish };
     }
     await progress(writer, "試合の流れを整理しています…");
     const updated = await analyst.generate(situationPrompt(next, log), {
       structuredOutput: { schema: situationSchema },
     });
+    await saveReasoning(runId, "situation", updated.reasoningText);
     next = { ...next, situation: updated.object };
     await narrate(writer, runId, resultPrompt(next, log), next, {
       enemyTable, enemyAction, playerAction, affinityWinner: result.affinityWinner, attempts: result.attempts,
