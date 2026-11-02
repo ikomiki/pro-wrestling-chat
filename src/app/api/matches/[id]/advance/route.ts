@@ -64,6 +64,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
               const n = chunk.data as { kind: "start" | "delta" | "end"; text?: string };
               if (n.kind === "start") send({ type: "start" });
               if (n.kind === "delta") send({ type: "delta", text: n.text ?? "" });
+            } else if (chunk.type === "data-progress") {
+              send({ type: "progress", label: (chunk.data as { label: string }).label });
             } else if (chunk.type === "data-state") {
               const state = chunk.data as MatchState;
               const s: MatchStatus = state.status === "finished" ? "finished" : "running";
