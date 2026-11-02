@@ -7,5 +7,5 @@ import { match } from "./workflows/match";
 export const mastra = new Mastra({
   agents: { analyst, narrator },
   workflows: { match },
-  storage: new LibSQLStore({ id: "mastra-storage", url: sqliteUrl("mastra.db") }),
+  storage: new LibSQLStore({ id: "mastra-storage", url: process.env.TURSO_MASTRA_DATABASE_URL || sqliteUrl("mastra.db") }),
 });
