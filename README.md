@@ -49,7 +49,7 @@ http://localhost:3000 を開き、ログイン画面の「新規登録はこち�
 | `bun dev` | 開発サーバー |
 | `bun run build` / `bun start` | 本番ビルドと起動 |
 | `bun test` | ユニットテスト |
-| `bun run lint` | ESLint |
+| `bun run lint` | `bun lint`（Bun canary が必要: `bun upgrade --canary`） |
 | `bunx tsc --noEmit` | 型検査 |
 | `bun run db:migrate` | Better Auth のテーブルを作成・更新する |
 | `bun scripts/smoke-match.ts` | ブラウザーを使わずに 1 試合を最後まで流す。AI を呼ぶので、Gemini では費用がかかる |

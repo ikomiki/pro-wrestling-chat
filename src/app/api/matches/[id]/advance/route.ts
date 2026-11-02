@@ -44,7 +44,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       const close = () => {
         if (!open) return;
         open = false;
-        try { controller.close(); } catch {}
+        try {
+          controller.close();
+        } catch {
+          // クライアント切断などでストリームが既に閉じていると throw するが、閉じる目的は達しているので捨てる
+        }
       };
       void (async () => {
         let status: string;
