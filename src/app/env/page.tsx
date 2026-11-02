@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { requireUser } from "@/lib/session";
 import { maskSecret } from "@/lib/mask";
+import { sqliteUrl } from "@/db/path";
 
 const VARS: { name: string; secret?: boolean }[] = [
   { name: "AI_PROVIDER" },
@@ -19,7 +20,13 @@ const VARS: { name: string; secret?: boolean }[] = [
 async function EnvTable() {
   // requireUser が headers() を読むので、以降の process.env はビルド時ではなくリクエスト時の値になる
   await requireUser();
+  const dbs = [
+    ["app.db", sqliteUrl("app.db")],
+    ["auth.db", sqliteUrl("auth.db")],
+    ["mastra.db", process.env.TURSO_MASTRA_DATABASE_URL || sqliteUrl("mastra.db")],
+  ];
   return (
+    <>
     <table className="w-full text-sm">
       <tbody className="divide-y">
         {VARS.map(({ name, secret }) => {
@@ -35,6 +42,18 @@ async function EnvTable() {
         })}
       </tbody>
     </table>
+    <h2 className="text-lg font-bold">SQLite ファイル</h2>
+    <table className="w-full text-sm">
+      <tbody className="divide-y">
+        {dbs.map(([name, url]) => (
+          <tr key={name}>
+            <th className="py-2 pr-4 text-left font-mono font-medium">{name}</th>
+            <td className="py-2 font-mono break-all">{url.replace(/^file:/, "")}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+    </>
   );
 }
 
