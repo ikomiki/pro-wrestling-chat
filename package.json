@@ -11,6 +11,7 @@
     "db:migrate": "mkdir -p data && bunx auth@latest migrate -y --config src/lib/auth.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.82",
     "@libsql/client": "^0.18.0",
     "@libsql/kysely-libsql": "^0.4.1",
     "@mastra/core": "^1.81.0",

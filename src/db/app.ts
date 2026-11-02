@@ -30,6 +30,9 @@ export function createAppDb(url: string) {
       `CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT, match_id TEXT NOT NULL,
         role TEXT NOT NULL, text TEXT NOT NULL, debug TEXT, created_at TEXT NOT NULL)`,
+      `CREATE TABLE IF NOT EXISTS reasonings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, match_id TEXT NOT NULL,
+        label TEXT NOT NULL, text TEXT NOT NULL, created_at TEXT NOT NULL)`,
     ])
     .then(() => {});
 
@@ -83,6 +86,13 @@ export function createAppDb(url: string) {
       await client.execute({
         sql: "INSERT INTO messages (match_id, role, text, debug, created_at) VALUES (?, ?, ?, ?, ?)",
         args: [input.matchId, input.role, input.text, input.debug === undefined ? null : JSON.stringify(input.debug), new Date().toISOString()],
+      });
+    },
+    async appendReasoning(input: { matchId: string; label: string; text: string }) {
+      await ready;
+      await client.execute({
+        sql: "INSERT INTO reasonings (match_id, label, text, created_at) VALUES (?, ?, ?, ?)",
+        args: [input.matchId, input.label, input.text, new Date().toISOString()],
       });
     },
     async listMessages(matchId: string): Promise<MessageRow[]> {

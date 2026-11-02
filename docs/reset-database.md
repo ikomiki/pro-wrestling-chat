@@ -7,7 +7,7 @@
 | ファイル | 中身 | テーブルの作られ方 |
 |---|---|---|
 | `data/auth.db` | Better Auth のユーザーとセッション | `bun run db:migrate` |
-| `data/app.db` | 試合とチャットのメッセージ | 初回アクセス時に `CREATE TABLE IF NOT EXISTS`（`src/db/app.ts`） |
+| `data/app.db` | 試合とチャットのメッセージ、モデルの思考 | 初回アクセス時に `CREATE TABLE IF NOT EXISTS`（`src/db/app.ts`） |
 | `data/mastra.db` | Mastra の workflow の実行状態 | Mastra の起動時に自動作成 |
 
 `app.db` は `CREATE TABLE IF NOT EXISTS` なので、既存テーブルの列を変えてもファイルを消さない限り反映されない。

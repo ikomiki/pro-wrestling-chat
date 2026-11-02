@@ -1,16 +1,22 @@
 import { Agent, type AgentExecutionOptions } from "@mastra/core/agent";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { extractReasoningMiddleware, wrapLanguageModel } from "ai";
 import { STYLE_EXAMPLES } from "./style-examples";
 
 const env = process.env;
 const local = env.AI_PROVIDER === "openai-compatible";
+// 思考を reasoning_content で返さず本文に <think> で混ぜるサーバーがある。本文から切り出して reasoning として扱う
 const model =
   local
-    ? {
-        providerId: "openai-compatible",
-        modelId: env.AI_MODEL ?? "",
-        url: env.OPENAI_COMPATIBLE_BASE_URL || "http://localhost:1234/v1",
-        apiKey: env.OPENAI_COMPATIBLE_API_KEY,
-      }
+    ? wrapLanguageModel({
+        model: createOpenAICompatible({
+          name: "openai-compatible",
+          baseURL: env.OPENAI_COMPATIBLE_BASE_URL || "http://localhost:1234/v1",
+          apiKey: env.OPENAI_COMPATIBLE_API_KEY,
+          supportsStructuredOutputs: true,
+        }).chatModel(env.AI_MODEL ?? ""),
+        middleware: extractReasoningMiddleware({ tagName: "think" }),
+      })
     : (`google/${env.AI_MODEL || "gemini-3.8-flash"}` as const);
 
 // サーバーごとに効く指定が違うので、効きうるものを全部送る。知らないフィールドは各サーバーが無視する

@@ -54,6 +54,8 @@ http://localhost:3000 を開き、ログイン画面の「新規登録はこち�
 | システムプロンプト末尾の `/no_think`（`off` のときだけ） | 初代 Qwen3。Qwen3.5 と Qwen3-2507 は無視する |
 | `thinkingConfig.thinkingLevel`（Gemini） | Gemini 3。思考は止められないので `off` は `low` になる。gemini-3.8-flash は `minimal` を受け付けない |
 
+本文に `<think>…</think>` で混ざった思考は本文から取り除く。`reasoning_content` で返ってきた思考とあわせて、`data/app.db` の `reasonings` テーブルに試合 ID・呼び出し元（`setup` / `classify` / `narrate` など）と一緒に保存する。
+
 リクエストで止めきれない場合は、サーバー側で既定を変える。
 
 - LM Studio: Qwen3.5 は `/v1` 経由の指定を無視することがある。モデル設定で思考を切るか、プロンプトテンプレートを ChatML にする
@@ -89,7 +91,7 @@ http://localhost:4111 を開く（API は http://localhost:4111/api）。`.env.l
 | ファイル | 中身 |
 |---|---|
 | `data/auth.db` | Better Auth のユーザーとセッション |
-| `data/app.db` | 試合とチャットのメッセージ |
+| `data/app.db` | 試合とチャットのメッセージ、モデルの思考（`reasonings` テーブル） |
 | `data/mastra.db` | Mastra の workflow の実行状態 |
 
 ## ディレクトリ
