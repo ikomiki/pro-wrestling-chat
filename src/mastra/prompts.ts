@@ -1,6 +1,6 @@
 import { DAMAGE } from "../game/rules";
 import { CATEGORY_LABEL, ENEMY_TYPE_LABEL, ENEMY_TYPE_TENDENCY, GRADE_LABEL, type Action, type Category, type Grade, type Side } from "../game/types";
-import type { MatchState, SetupInput, TurnLog } from "../game/schema";
+import type { MatchState, SetupInput, Situation, TurnLog } from "../game/schema";
 
 const actionText = (a: Action) =>
   `${a.name}（${a.category === "none" ? "攻撃ではない" : CATEGORY_LABEL[a.category]}・${GRADE_LABEL[a.grade]}）`;
@@ -16,7 +16,22 @@ const situation = (s: MatchState) =>
     fighterText("プレイヤー", s.player),
     fighterText("敵", s.enemy),
     `現在 ${s.turn} ターン目`,
+    `敵の心境: ${s.situation.enemyMind}`,
+    `敵の方針: ${s.situation.enemyPlan}`,
   ].join("\n");
+
+const SITUATION_LABEL: Record<keyof Situation, string> = {
+  crowd: "観客と会場",
+  position: "リング上の位置関係",
+  momentum: "試合の流れ",
+  playerMind: "プレイヤーの心境",
+  playerPlan: "プレイヤーの方針",
+  enemyMind: "敵の心境",
+  enemyPlan: "敵の方針",
+};
+const SITUATION_ITEMS = Object.entries(SITUATION_LABEL).map(([k, v]) => `${k}=${v}`).join("、");
+const situationLines = (s: Situation) =>
+  (Object.keys(SITUATION_LABEL) as (keyof Situation)[]).map((k) => `- ${SITUATION_LABEL[k]}: ${s[k]}`);
 
 export const completeSetupPrompt = (
   input: SetupInput,
@@ -33,7 +48,9 @@ export const completeSetupPrompt = (
     row("敵", "enemy"),
     "敵の設定が空欄で種にタイプが含まれる場合は、そのタイプに合う敵にしてください。",
     `敵のタイプは ${Object.entries(ENEMY_TYPE_LABEL).map(([k, v]) => `${k}=${v}`).join("、")} のどれかです。判断できなければ "unknown" にしてください。`,
-    "出力: { time, place, playerName, playerDescription, enemyName, enemyDescription, enemyType }",
+    "あわせて、ゴング前の状況リストの初期値を作ってください。各項目は 1 文で、数値と具体的な技名は書かないでください。",
+    `状況リストの項目: ${SITUATION_ITEMS}`,
+    "出力: { time, place, playerName, playerDescription, enemyName, enemyDescription, enemyType, situation: { crowd, position, momentum, playerMind, playerPlan, enemyMind, enemyPlan } }",
   ].join("\n");
 };
 
@@ -81,61 +98,92 @@ const condition = (f: MatchState["player"]) => {
   return ratio >= 1 ? "万全" : ratio > 0.6 ? "余裕がある" : ratio > 0.3 ? "消耗している" : ratio > 0 ? "瀕死" : "力尽きた";
 };
 
-// 語り手には数値（体力・ターン数）を渡さない。渡すと「第３ラウンド」のように描写へ漏れる
-const narratorSituation = (s: MatchState, prev: string | null) =>
-  [
-    `時間: ${s.setting.time}`,
-    `場所: ${s.setting.place}`,
-    `プレイヤー: ${s.player.name}（${s.player.description}）状態: ${condition(s.player)}`,
-    `敵: ${s.enemy.name}（${s.enemy.description}）タイプ: ${ENEMY_TYPE_LABEL[s.setting.enemyType]} 状態: ${condition(s.enemy)}`,
-    ...(prev ? ["直前の描写（これに自然につなげる）:", prev] : []),
+const SIDE_LABEL: Record<Side, string> = { player: "プレイヤー", enemy: "敵" };
+const damageText = (n: number) => (n === 0 ? "ダメージなし" : n === 1 ? "軽いダメージ" : n === 2 ? "大きなダメージ" : "深刻なダメージ");
+const actionOf = (log: TurnLog, side: Side) => (side === "player" ? log.playerAction : log.enemyAction);
+
+const judgeParts = (log: TurnLog) => {
+  const r = log.result;
+  const parts = r.attempts.map((a) => `${SIDE_LABEL[a.side]}の${actionOf(log, a.side).name}${a.hit ? "が決まった" : "は外れた"}`);
+  if (r.affinityWinner) {
+    const loser: Side = r.affinityWinner === "player" ? "enemy" : "player";
+    parts.unshift(`${SIDE_LABEL[loser]}の${actionOf(log, loser).name}は相性で潰された`);
+  }
+  return parts.length ? parts : ["どちらの技も決まらなかった"];
+};
+
+// ターン番号を付けない。語り手に数値を渡すと「第３ラウンド」のように描写へ漏れる
+export const eventsText = (log: TurnLog[]) => log.map((l) => judgeParts(l).join(" / "));
+
+// 語り手には過去に生成した文章も数値も渡さない。前の文章を渡すと同じ描写を繰り返す
+const narratorInput = (s: MatchState, past: TurnLog[], scene: string[]) => {
+  const events = eventsText(past);
+  return [
+    "## 設定",
+    `- 時間: ${s.setting.time}`,
+    `- 場所: ${s.setting.place}`,
+    `- プレイヤー: ${s.player.name}（${s.player.description}）状態: ${condition(s.player)}`,
+    `- 敵: ${s.enemy.name}（${s.enemy.description}）タイプ: ${ENEMY_TYPE_LABEL[s.setting.enemyType]} 状態: ${condition(s.enemy)}`,
+    "## いまの状況",
+    ...situationLines(s.situation),
+    "## これまでの出来事",
+    ...(events.length ? events.map((e) => `- ${e}`) : ["- まだない"]),
+    "## この場面で描くこと",
+    ...scene.map((l) => `- ${l}`),
   ].join("\n");
+};
 
 const narratorRules = [
   "会場・時刻の説明を繰り返さないでください（最初の場面で一度書けば十分です）。",
   "ラウンドやターン数を書かないでください（プロレスにラウンドはありません）。",
   "数値は書かないでください。",
+  "敵に具体的な技名や次の一手を言わせないでください（意気込みや挑発は構いません）。",
 ];
 
-export const scenePrompt = (state: MatchState, enemyAction: Action, prev: string | null) =>
-  [
+export const scenePrompt = (state: MatchState, enemyAction: Action) =>
+  narratorInput(state, state.log, [
     "次の場面を描写してください。プレイヤーがこれから行動を選ぶ直前までを書きます。",
-    narratorSituation(state, prev),
     state.turn === 1
       ? "試合の最初の場面です。会場の様子、選手の入場とゴングから書き始めてください。"
-      : "直前の描写の続きを書いてください。入場やゴングはもう済んでいるので書かないでください。",
+      : "前の場面の続きです。入場やゴングはもう済んでいるので書かないでください。",
     `敵はこの後「${actionText(enemyAction)}」を狙っています。技名や種類は書かず、構え・視線・間合いなどの身体の動きと気配として予兆だけを混ぜてください。`,
-    "実況アナウンサーと解説者のセリフを交えてください。",
     ...narratorRules,
-  ].join("\n");
+  ]);
 
-const SIDE_LABEL: Record<Side, string> = { player: "プレイヤー", enemy: "敵" };
-const damageText = (n: number) => (n === 0 ? "ダメージなし" : n === 1 ? "軽いダメージ" : n === 2 ? "大きなダメージ" : "深刻なダメージ");
+const takenDamage = (log: TurnLog, side: Side) =>
+  log.result.attempts
+    .filter((a) => a.hit && a.side !== side)
+    .reduce((n, a) => n + DAMAGE[actionOf(log, a.side).grade], 0);
 
-export const resultPrompt = (state: MatchState, log: TurnLog, prev: string | null) => {
-  const r = log.result;
-  const actionOf = (side: Side) => (side === "player" ? log.playerAction : log.enemyAction);
-  const lines = r.attempts.map((a) => `${SIDE_LABEL[a.side]}の「${actionOf(a.side).name}」は${a.hit ? "決まった" : "外れた"}`);
-  if (r.affinityWinner) {
-    const loser: Side = r.affinityWinner === "player" ? "enemy" : "player";
-    lines.unshift(`${SIDE_LABEL[loser]}の「${actionOf(loser).name}」は相性で潰され、決まらなかった`);
-  }
-  const taken = (side: Side) =>
-    r.attempts.filter((a) => a.hit && a.side !== side).reduce((n, a) => n + DAMAGE[actionOf(a.side).grade], 0);
-  return [
+export const resultPrompt = (state: MatchState, log: TurnLog) =>
+  narratorInput(state, state.log.filter((l) => l.turn !== log.turn), [
     "このターンの結果を描写してください。",
-    narratorSituation(state, prev),
     `敵の技: ${actionText(log.enemyAction)}`,
     `プレイヤーの行動: ${log.playerInput}（${actionText(log.playerAction)}）`,
-    `判定: ${lines.join("、") || "どちらの技も決まらなかった"}`,
-    taken("player") + taken("enemy") === 0
+    `判定: ${judgeParts(log).join("、")}`,
+    takenDamage(log, "player") + takenDamage(log, "enemy") === 0
       ? "どちらにもダメージはない。"
-      : `受けたダメージ: プレイヤーは${damageText(taken("player"))}、敵は${damageText(taken("enemy"))}`,
+      : `受けたダメージ: プレイヤーは${damageText(takenDamage(log, "player"))}、敵は${damageText(takenDamage(log, "enemy"))}`,
     "この判定どおりに、誰の技が決まり誰が外したかを描いてください。決まらなかった技を当たったように書かないでください。",
     "格（通常/大技/必殺技）の表現を誇張しないでください。通常の技を「必殺の」「とどめの」などと書かないでください。",
     ...narratorRules,
     state.status === "finished"
       ? `試合はここで決着します。勝者: ${state.winner === "player" ? "プレイヤー" : "敵"}。決着の様子「${state.finish ?? ""}」で試合を締めてください。`
       : "試合はまだ続きます。",
+  ]);
+
+export const situationPrompt = (state: MatchState, log: TurnLog) =>
+  [
+    "このターンの判定を受けて、試合の状況リストを更新してください。",
+    "各項目は 1 文で書いてください。数値と具体的な技名は書かないでください。",
+    `項目: ${SITUATION_ITEMS}`,
+    "更新前の状況:",
+    ...situationLines(state.situation),
+    `判定: ${judgeParts(log).join("、")}`,
+    `プレイヤーの入力: ${log.playerInput}`,
+    `プレイヤーの状態: ${condition(state.player)} / 敵の状態: ${condition(state.enemy)}`,
+    ...(state.status === "finished"
+      ? [`試合は決着した。勝者: ${SIDE_LABEL[state.winner ?? "player"]}。決着の様子: ${state.finish ?? ""}`]
+      : []),
+    "出力: { crowd, position, momentum, playerMind, playerPlan, enemyMind, enemyPlan }",
   ].join("\n");
-};
