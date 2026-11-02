@@ -45,6 +45,17 @@ export const turnLogSchema = z.object({
 });
 export type TurnLog = z.infer<typeof turnLogSchema>;
 
+export const situationSchema = z.object({
+  crowd: z.string(),
+  position: z.string(),
+  momentum: z.string(),
+  playerMind: z.string(),
+  playerPlan: z.string(),
+  enemyMind: z.string(),
+  enemyPlan: z.string(),
+});
+export type Situation = z.infer<typeof situationSchema>;
+
 export const matchStateSchema = z.object({
   setting: z.object({
     time: z.string(),
@@ -60,6 +71,7 @@ export const matchStateSchema = z.object({
   enemyHistory: z.array(actionSchema),
   winner: side.nullable(),
   finish: z.string().nullable(),
+  situation: situationSchema,
   log: z.array(turnLogSchema),
 });
 export type MatchState = z.infer<typeof matchStateSchema>;

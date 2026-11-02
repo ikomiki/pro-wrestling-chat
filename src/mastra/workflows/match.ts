@@ -5,12 +5,12 @@ import { appDb } from "../../db/app";
 import { adjustCategoryTable, normalizeWeights } from "../../game/enemy-table";
 import { cryptoRng } from "../../game/random";
 import { resolveTurn } from "../../game/rules";
-import { actionSchema, matchStateSchema, setupInputSchema, turnLogSchema, type MatchState, type SetupInput } from "../../game/schema";
+import { actionSchema, matchStateSchema, setupInputSchema, situationSchema, turnLogSchema, type MatchState, type SetupInput } from "../../game/schema";
 import { SEEDS } from "../../game/seeds";
 import { ENEMY_TYPE_LABEL, type Category, type EnemyType, type Grade } from "../../game/types";
 import { analyst, narrator } from "../agents";
 import {
-  classifyPrompt, completeSetupPrompt, enemyMovePrompt, enemyTablePrompt, finishPrompt, resultPrompt, scenePrompt,
+  classifyPrompt, completeSetupPrompt, enemyMovePrompt, enemyTablePrompt, finishPrompt, resultPrompt, scenePrompt, situationPrompt,
 } from "../prompts";
 import { pickWithTool } from "../tools/random-pick";
 
@@ -18,10 +18,9 @@ const ENEMY_TYPES = Object.keys(ENEMY_TYPE_LABEL) as EnemyType[];
 const even = (labels: readonly string[]) => labels.map((label) => ({ label, weight: 1 }));
 const asOptions = (t: Record<string, number>) => Object.entries(t).map(([label, weight]) => ({ label, weight }));
 
-const lastNarration = async (runId: string) =>
-  (await appDb.listMessages(runId)).findLast((m) => m.role === "narrator")?.text ?? null;
+const progress = (writer: ToolStream, label: string) => writer.custom({ type: "data-progress", data: { label } });
 
-async function narrate(writer: ToolStream, runId: string, prompt: string, state: MatchState, debug: unknown) {
+async function narrate(writer: ToolStream, runId: string, prompt: string, state: MatchState, debug: Record<string, unknown>) {
   await writer.custom({ type: "data-narration", data: { kind: "start" } });
   const stream = await narrator.stream(prompt);
   let text = "";
@@ -35,7 +34,7 @@ async function narrate(writer: ToolStream, runId: string, prompt: string, state:
     await writer.custom({ type: "data-narration", data: { kind: "delta", text: end } });
   }
   await writer.custom({ type: "data-narration", data: { kind: "end" } });
-  await appDb.appendMessage({ matchId: runId, role: "narrator", text, debug });
+  await appDb.appendMessage({ matchId: runId, role: "narrator", text, debug: { ...debug, prompt } });
   await appDb.updateMatch(runId, { state, ...(state.status === "finished" && { status: "finished" as const }) });
   await writer.custom({ type: "data-state", data: state });
 }
@@ -45,7 +44,8 @@ const setupStep = createStep({
   inputSchema: setupInputSchema,
   outputSchema: matchStateSchema,
   retries: 2,
-  execute: async ({ inputData, runId }) => {
+  execute: async ({ inputData, runId, writer }) => {
+    await progress(writer, "試合の設定を考えています…");
     const seeds: Partial<Record<keyof SetupInput, string>> = {};
     for (const key of ["time", "place", "player", "enemy"] as const) {
       if (!inputData[key].trim()) seeds[key] = (await pickWithTool(even(SEEDS[key]))).label;
@@ -62,6 +62,7 @@ const setupStep = createStep({
           playerName: z.string(), playerDescription: z.string(),
           enemyName: z.string(), enemyDescription: z.string(),
           enemyType: z.enum(["giant", "speed", "muscle", "technician", "unknown"]),
+          situation: situationSchema,
         }),
       },
     });
@@ -78,6 +79,7 @@ const setupStep = createStep({
       enemyHistory: [],
       winner: null,
       finish: null,
+      situation: s.situation,
       log: [],
     };
   },
@@ -92,6 +94,7 @@ const sceneStep = createStep({
   outputSchema: withTable,
   retries: 2,
   execute: async ({ inputData, runId, writer }) => {
+    await progress(writer, "敵の出方を考えています…");
     const state: MatchState = { ...inputData, turn: inputData.turn + 1 };
     const w = z.number();
     const table = await analyst.generate(enemyTablePrompt(state), {
@@ -114,7 +117,7 @@ const sceneStep = createStep({
     });
     const pendingEnemy = { name: move.object.name, category, grade };
     const next: MatchState = { ...state, pendingEnemy };
-    await narrate(writer, runId, scenePrompt(next, pendingEnemy, await lastNarration(runId)), next, {
+    await narrate(writer, runId, scenePrompt(next, pendingEnemy), next, {
       enemyTable, gradeTable, categoryPick, gradePick, enemyAction: pendingEnemy,
     });
     return { ...next, enemyTable };
@@ -144,6 +147,7 @@ const resolveStep = createStep({
   outputSchema: matchStateSchema,
   retries: 2,
   execute: async ({ inputData, runId, writer }) => {
+    await progress(writer, "技を判定しています…");
     const { enemyTable, playerInput, ...state } = inputData;
     const enemyAction = state.pendingEnemy;
     if (!enemyAction) throw new Error("resolve: pendingEnemy is missing");
@@ -162,13 +166,19 @@ const resolveStep = createStep({
       pendingEnemy: null,
     };
     if (result.winner) {
+      await progress(writer, "決着を決めています…");
       const lastHit = result.winner === "player" ? playerAction : enemyAction;
       const fin = await analyst.generate(finishPrompt(next, lastHit), {
         structuredOutput: { schema: z.object({ finish: z.string() }) },
       });
       next = { ...next, status: "finished", winner: result.winner, finish: fin.object.finish };
     }
-    await narrate(writer, runId, resultPrompt(next, log, await lastNarration(runId)), next, {
+    await progress(writer, "試合の流れを整理しています…");
+    const updated = await analyst.generate(situationPrompt(next, log), {
+      structuredOutput: { schema: situationSchema },
+    });
+    next = { ...next, situation: updated.object };
+    await narrate(writer, runId, resultPrompt(next, log), next, {
       enemyTable, enemyAction, playerAction, affinityWinner: result.affinityWinner, attempts: result.attempts,
     });
     return next;
