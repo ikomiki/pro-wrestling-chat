@@ -40,6 +40,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "lefthook": "^2.2.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
@@ -49,6 +50,7 @@
     "unrs-resolver"
   ],
   "trustedDependencies": [
+    "lefthook",
     "sharp",
     "unrs-resolver"
   ]

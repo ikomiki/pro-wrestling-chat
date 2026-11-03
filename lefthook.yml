@@ -1,0 +1,11 @@
+pre-commit:
+  jobs:
+    - name: fmt
+      run: bun fmt {staged_files}
+      glob: "*.{js,jsx,ts,tsx,mjs,cjs,json,css,md,yml,yaml}"
+      stage_fixed: true
+    - name: lint
+      run: bun lint --no-script {staged_files}
+      glob: "*.{js,jsx,ts,tsx,mjs,cjs}"
+    - name: test
+      run: bun test
